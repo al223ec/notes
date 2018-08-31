@@ -1,0 +1,5 @@
+{
+    "scripts": {
+      "watch": "chokidar '**/*.elm' -c 'elm make Notes.elm --output js/notes.js' --initial"
+    }
+  }

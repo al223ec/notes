@@ -1,5 +1,27 @@
 {
-    "scripts": {
-      "watch": "chokidar '**/*.elm' -c 'elm make Notes.elm --output js/notes.js' --initial"
-    }
-  }
+  "scripts": {
+    "watch:elm": "chokidar '**/*.elm' -c 'elm make Notes.elm --output js/notes.js' --initial",
+    "watch:scss": "node-sass --watch scss -o css",
+    "dev": "npm-run-all --parallel watch:*"
+  },
+  "dependencies": {},
+  "name": "notes",
+  "description": "",
+  "version": "1.0.0",
+  "main": "index.html",
+  "devDependencies": {
+    "chokidar-cli": "^1.2.1",
+    "node-sass": "^4.9.3",
+    "npm-run-all": "^4.1.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/al223ec/notes.git"
+  },
+  "author": "Anton Ledström",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/al223ec/notes/issues"
+  },
+  "homepage": "https://github.com/al223ec/notes#readme"
+}

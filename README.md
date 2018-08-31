@@ -1,7 +1,5 @@
-install
-----
-npm install chokidar-cli --save-dev
-
+watch
 ----
 using chokidar
-npm run watch
+
+npm run dev

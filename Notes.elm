@@ -49,6 +49,8 @@ init _ =
 type Msg
     = InitializeNotesTimestamps Time.Posix
     | SelectNote Int
+    | UpdateSelectedNoteBody String
+    | UpdateSelectedNoteTimestamp Time.Posix
 
 
 update : Msg -> NoteList -> ( NoteList, Cmd Msg )
@@ -61,6 +63,44 @@ update msg noteList =
 
         SelectNote id ->
             ( { noteList | selectedNoteId = id }, Cmd.none )
+
+        UpdateSelectedNoteBody newText ->
+            case getSelectedNote noteList of
+                Nothing ->
+                    ( noteList, Cmd.none )
+
+                Just selectedNote ->
+                    let
+                        updateSelectedNote note =
+                            if note.id == noteList.selectedNoteId then
+                                { note | body = newText }
+                            else
+                                note
+
+                        newNotes =
+                            List.map updateSelectedNote noteList.notes
+                    in
+                        ( { noteList | notes = newNotes }
+                        , Task.perform UpdateSelectedNoteTimestamp Time.now
+                        )
+
+        UpdateSelectedNoteTimestamp newTime ->
+            case getSelectedNote noteList of
+                Nothing ->
+                    ( noteList, Cmd.none )
+
+                Just selectedNote ->
+                    let
+                        updateSelectedNote note =
+                            if note.id == noteList.selectedNoteId then
+                                { note | timestamp = Time.posixToMillis newTime }
+                            else
+                                note
+
+                        newNotes =
+                            List.map updateSelectedNote noteList.notes
+                    in
+                        ( { noteList | notes = newNotes }, Cmd.none )
 
 
 
@@ -111,19 +151,24 @@ viewNoteSelector note selectedNoteId =
 
 viewNoteEditor : NoteList -> Html Msg
 viewNoteEditor noteList =
-    case noteList.notes |> List.filter (\note -> note.id == noteList.selectedNoteId) |> List.head of
+    case getSelectedNote noteList of
         Nothing ->
             div [ class "note-editor" ] []
 
         Just selectedNote ->
             div [ class "note-editor" ]
                 [ p [ class "note-editor-info" ] [ text (formatTimeStamp selectedNote.timestamp) ]
-                , textarea [ class "note-editor-input" ] [ text selectedNote.body ]
+                , textarea [ class "note-editor-input", onInput UpdateSelectedNoteBody, value selectedNote.body ] []
                 ]
 
 
 
 -- HELPERS
+
+
+getSelectedNote : NoteList -> Maybe Note
+getSelectedNote noteList =
+    noteList.notes |> List.filter (\note -> note.id == noteList.selectedNoteId) |> List.head
 
 
 formatTitle : String -> String

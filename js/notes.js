@@ -4994,6 +4994,38 @@ var elm$core$Platform$Sub$none = elm$core$Platform$Sub$batch(_List_Nil);
 var author$project$Notes$subscriptions = function (noteList) {
 	return elm$core$Platform$Sub$none;
 };
+var author$project$Notes$UpdateSelectedNoteTimestamp = function (a) {
+	return {$: 'UpdateSelectedNoteTimestamp', a: a};
+};
+var elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2(elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
+var elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return elm$core$Maybe$Just(x);
+	} else {
+		return elm$core$Maybe$Nothing;
+	}
+};
+var author$project$Notes$getSelectedNote = function (noteList) {
+	return elm$core$List$head(
+		A2(
+			elm$core$List$filter,
+			function (note) {
+				return _Utils_eq(note.id, noteList.selectedNoteId);
+			},
+			noteList.notes));
+};
 var elm$core$Platform$Cmd$batch = _Platform_batch;
 var elm$core$Platform$Cmd$none = elm$core$Platform$Cmd$batch(_List_Nil);
 var elm$time$Time$posixToMillis = function (_n0) {
@@ -5002,33 +5034,77 @@ var elm$time$Time$posixToMillis = function (_n0) {
 };
 var author$project$Notes$update = F2(
 	function (msg, noteList) {
-		if (msg.$ === 'InitializeNotesTimestamps') {
-			var time = msg.a;
-			return _Utils_Tuple2(
-				_Utils_update(
-					noteList,
-					{
-						notes: A2(
-							elm$core$List$map,
-							function (note) {
-								return _Utils_update(
-									note,
-									{
-										timestamp: elm$time$Time$posixToMillis(time)
-									});
-							},
-							noteList.notes)
-					}),
-				elm$core$Platform$Cmd$none);
-		} else {
-			var id = msg.a;
-			return _Utils_Tuple2(
-				_Utils_update(
-					noteList,
-					{selectedNoteId: id}),
-				elm$core$Platform$Cmd$none);
+		switch (msg.$) {
+			case 'InitializeNotesTimestamps':
+				var time = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						noteList,
+						{
+							notes: A2(
+								elm$core$List$map,
+								function (note) {
+									return _Utils_update(
+										note,
+										{
+											timestamp: elm$time$Time$posixToMillis(time)
+										});
+								},
+								noteList.notes)
+						}),
+					elm$core$Platform$Cmd$none);
+			case 'SelectNote':
+				var id = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						noteList,
+						{selectedNoteId: id}),
+					elm$core$Platform$Cmd$none);
+			case 'UpdateSelectedNoteBody':
+				var newText = msg.a;
+				var _n1 = author$project$Notes$getSelectedNote(noteList);
+				if (_n1.$ === 'Nothing') {
+					return _Utils_Tuple2(noteList, elm$core$Platform$Cmd$none);
+				} else {
+					var selectedNote = _n1.a;
+					var updateSelectedNote = function (note) {
+						return _Utils_eq(note.id, noteList.selectedNoteId) ? _Utils_update(
+							note,
+							{body: newText}) : note;
+					};
+					var newNotes = A2(elm$core$List$map, updateSelectedNote, noteList.notes);
+					return _Utils_Tuple2(
+						_Utils_update(
+							noteList,
+							{notes: newNotes}),
+						A2(elm$core$Task$perform, author$project$Notes$UpdateSelectedNoteTimestamp, elm$time$Time$now));
+				}
+			default:
+				var newTime = msg.a;
+				var _n2 = author$project$Notes$getSelectedNote(noteList);
+				if (_n2.$ === 'Nothing') {
+					return _Utils_Tuple2(noteList, elm$core$Platform$Cmd$none);
+				} else {
+					var selectedNote = _n2.a;
+					var updateSelectedNote = function (note) {
+						return _Utils_eq(note.id, noteList.selectedNoteId) ? _Utils_update(
+							note,
+							{
+								timestamp: elm$time$Time$posixToMillis(newTime)
+							}) : note;
+					};
+					var newNotes = A2(elm$core$List$map, updateSelectedNote, noteList.notes);
+					return _Utils_Tuple2(
+						_Utils_update(
+							noteList,
+							{notes: newNotes}),
+						elm$core$Platform$Cmd$none);
+				}
 		}
 	});
+var author$project$Notes$UpdateSelectedNoteBody = function (a) {
+	return {$: 'UpdateSelectedNoteBody', a: a};
+};
 var elm$core$Basics$modBy = _Basics_modBy;
 var elm$time$Time$flooredDiv = F2(
 	function (numerator, denominator) {
@@ -5108,26 +5184,6 @@ var author$project$Notes$formatTimeStamp = function (timestamp) {
 		A2(elm$time$Time$toHour, elm$time$Time$utc, time));
 	return hour + (':' + (minute + (':' + (second + ' UTC'))));
 };
-var elm$core$List$filter = F2(
-	function (isGood, list) {
-		return A3(
-			elm$core$List$foldr,
-			F2(
-				function (x, xs) {
-					return isGood(x) ? A2(elm$core$List$cons, x, xs) : xs;
-				}),
-			_List_Nil,
-			list);
-	});
-var elm$core$List$head = function (list) {
-	if (list.b) {
-		var x = list.a;
-		var xs = list.b;
-		return elm$core$Maybe$Just(x);
-	} else {
-		return elm$core$Maybe$Nothing;
-	}
-};
 var elm$json$Json$Decode$map = _Json_map1;
 var elm$json$Json$Decode$map2 = _Json_map2;
 var elm$json$Json$Decode$succeed = _Json_succeed;
@@ -5157,14 +5213,43 @@ var elm$html$Html$Attributes$stringProperty = F2(
 			elm$json$Json$Encode$string(string));
 	});
 var elm$html$Html$Attributes$class = elm$html$Html$Attributes$stringProperty('className');
-var author$project$Notes$viewNoteEditor = function (noteList) {
-	var _n0 = elm$core$List$head(
+var elm$html$Html$Attributes$value = elm$html$Html$Attributes$stringProperty('value');
+var elm$html$Html$Events$alwaysStop = function (x) {
+	return _Utils_Tuple2(x, true);
+};
+var elm$virtual_dom$VirtualDom$MayStopPropagation = function (a) {
+	return {$: 'MayStopPropagation', a: a};
+};
+var elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var elm$html$Html$Events$stopPropagationOn = F2(
+	function (event, decoder) {
+		return A2(
+			elm$virtual_dom$VirtualDom$on,
+			event,
+			elm$virtual_dom$VirtualDom$MayStopPropagation(decoder));
+	});
+var elm$json$Json$Decode$field = _Json_decodeField;
+var elm$json$Json$Decode$at = F2(
+	function (fields, decoder) {
+		return A3(elm$core$List$foldr, elm$json$Json$Decode$field, decoder, fields);
+	});
+var elm$json$Json$Decode$string = _Json_decodeString;
+var elm$html$Html$Events$targetValue = A2(
+	elm$json$Json$Decode$at,
+	_List_fromArray(
+		['target', 'value']),
+	elm$json$Json$Decode$string);
+var elm$html$Html$Events$onInput = function (tagger) {
+	return A2(
+		elm$html$Html$Events$stopPropagationOn,
+		'input',
 		A2(
-			elm$core$List$filter,
-			function (note) {
-				return _Utils_eq(note.id, noteList.selectedNoteId);
-			},
-			noteList.notes));
+			elm$json$Json$Decode$map,
+			elm$html$Html$Events$alwaysStop,
+			A2(elm$json$Json$Decode$map, tagger, elm$html$Html$Events$targetValue)));
+};
+var author$project$Notes$viewNoteEditor = function (noteList) {
+	var _n0 = author$project$Notes$getSelectedNote(noteList);
 	if (_n0.$ === 'Nothing') {
 		return A2(
 			elm$html$Html$div,
@@ -5198,12 +5283,11 @@ var author$project$Notes$viewNoteEditor = function (noteList) {
 					elm$html$Html$textarea,
 					_List_fromArray(
 						[
-							elm$html$Html$Attributes$class('note-editor-input')
+							elm$html$Html$Attributes$class('note-editor-input'),
+							elm$html$Html$Events$onInput(author$project$Notes$UpdateSelectedNoteBody),
+							elm$html$Html$Attributes$value(selectedNote.body)
 						]),
-					_List_fromArray(
-						[
-							elm$html$Html$text(selectedNote.body)
-						]))
+					_List_Nil)
 				]));
 	}
 };
@@ -5238,7 +5322,6 @@ var elm$html$Html$Attributes$classList = function (classes) {
 var elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 'Normal', a: a};
 };
-var elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
 var elm$html$Html$Events$on = F2(
 	function (event, decoder) {
 		return A2(

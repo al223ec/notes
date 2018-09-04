@@ -4994,6 +4994,9 @@ var elm$core$Platform$Sub$none = elm$core$Platform$Sub$batch(_List_Nil);
 var author$project$Notes$subscriptions = function (noteList) {
 	return elm$core$Platform$Sub$none;
 };
+var author$project$Notes$CreateNote = function (a) {
+	return {$: 'CreateNote', a: a};
+};
 var author$project$Notes$UpdateSelectedNoteTimestamp = function (a) {
 	return {$: 'UpdateSelectedNoteTimestamp', a: a};
 };
@@ -5079,7 +5082,7 @@ var author$project$Notes$update = F2(
 							{notes: newNotes}),
 						A2(elm$core$Task$perform, author$project$Notes$UpdateSelectedNoteTimestamp, elm$time$Time$now));
 				}
-			default:
+			case 'UpdateSelectedNoteTimestamp':
 				var newTime = msg.a;
 				var _n2 = author$project$Notes$getSelectedNote(noteList);
 				if (_n2.$ === 'Nothing') {
@@ -5100,8 +5103,30 @@ var author$project$Notes$update = F2(
 							{notes: newNotes}),
 						elm$core$Platform$Cmd$none);
 				}
+			case 'ClickNew':
+				return _Utils_Tuple2(
+					noteList,
+					A2(elm$core$Task$perform, author$project$Notes$CreateNote, elm$time$Time$now));
+			default:
+				var newTime = msg.a;
+				var newTimestamp = elm$time$Time$posixToMillis(newTime);
+				var newId = newTimestamp;
+				return _Utils_Tuple2(
+					_Utils_update(
+						noteList,
+						{
+							notes: _Utils_ap(
+								_List_fromArray(
+									[
+										{body: '', id: newId, timestamp: newTimestamp}
+									]),
+								noteList.notes),
+							selectedNoteId: newId
+						}),
+					elm$core$Platform$Cmd$none);
 		}
 	});
+var author$project$Notes$ClickNew = {$: 'ClickNew'};
 var author$project$Notes$UpdateSelectedNoteBody = function (a) {
 	return {$: 'UpdateSelectedNoteBody', a: a};
 };
@@ -5425,7 +5450,8 @@ var author$project$Notes$view = function (noteList) {
 						elm$html$Html$button,
 						_List_fromArray(
 							[
-								elm$html$Html$Attributes$class('toolbar-button')
+								elm$html$Html$Attributes$class('toolbar-button'),
+								elm$html$Html$Events$onClick(author$project$Notes$ClickNew)
 							]),
 						_List_fromArray(
 							[

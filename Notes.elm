@@ -51,6 +51,8 @@ type Msg
     | SelectNote Int
     | UpdateSelectedNoteBody String
     | UpdateSelectedNoteTimestamp Time.Posix
+    | ClickNew
+    | CreateNote Time.Posix
 
 
 update : Msg -> NoteList -> ( NoteList, Cmd Msg )
@@ -102,6 +104,24 @@ update msg noteList =
                     in
                         ( { noteList | notes = newNotes }, Cmd.none )
 
+        ClickNew ->
+            ( noteList, Time.now |> Task.perform CreateNote )
+
+        CreateNote newTime ->
+            let
+                newTimestamp =
+                    Time.posixToMillis newTime
+
+                newId =
+                    newTimestamp
+            in
+                ( { noteList
+                    | notes = [ { id = newId, body = "", timestamp = newTimestamp } ] ++ noteList.notes
+                    , selectedNoteId = newId
+                  }
+                , Cmd.none
+                )
+
 
 
 -- SUBSCRIPTIONS
@@ -120,7 +140,7 @@ view : NoteList -> Html Msg
 view noteList =
     div [ id "app" ]
         [ div [ class "toolbar" ]
-            [ button [ class "toolbar-button" ] [ text "New" ]
+            [ button [ class "toolbar-button", onClick ClickNew ] [ text "New" ]
             , button [ class "toolbar-button" ] [ text "Delete" ]
             , input [ class "toolbar-search", type_ "text", placeholder "Search.. " ] []
             ]

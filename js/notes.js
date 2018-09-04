@@ -4985,6 +4985,7 @@ var author$project$Notes$init = function (_n0) {
 					{body: 'Second note...', id: 2, timestamp: 23430},
 					{body: 'Third note...', id: 3, timestamp: 4983490228633471814}
 				]),
+			searchNoteText: '',
 			selectedNoteId: 1
 		},
 		A2(elm$core$Task$perform, author$project$Notes$InitializeNotesTimestamps, elm$time$Time$now));
@@ -5011,6 +5012,27 @@ var elm$core$List$filter = F2(
 			_List_Nil,
 			list);
 	});
+var elm$core$List$sortBy = _List_sortBy;
+var elm$core$String$contains = _String_contains;
+var elm$core$String$toLower = _String_toLower;
+var author$project$Notes$transformNotes = F2(
+	function (searchNoteText, notes) {
+		return elm$core$List$reverse(
+			A2(
+				elm$core$List$sortBy,
+				function ($) {
+					return $.timestamp;
+				},
+				A2(
+					elm$core$List$filter,
+					function (note) {
+						return A2(
+							elm$core$String$contains,
+							elm$core$String$toLower(searchNoteText),
+							elm$core$String$toLower(note.body));
+					},
+					notes)));
+	});
 var elm$core$List$head = function (list) {
 	if (list.b) {
 		var x = list.a;
@@ -5020,6 +5042,11 @@ var elm$core$List$head = function (list) {
 		return elm$core$Maybe$Nothing;
 	}
 };
+var author$project$Notes$getFirstVisibleNote = F2(
+	function (notes, searchText) {
+		return elm$core$List$head(
+			A2(author$project$Notes$transformNotes, searchText, notes));
+	});
 var author$project$Notes$getSelectedNote = function (noteList) {
 	return elm$core$List$head(
 		A2(
@@ -5027,8 +5054,12 @@ var author$project$Notes$getSelectedNote = function (noteList) {
 			function (note) {
 				return _Utils_eq(note.id, noteList.selectedNoteId);
 			},
-			noteList.notes));
+			A2(author$project$Notes$transformNotes, noteList.searchNoteText, noteList.notes)));
 };
+var elm$core$Basics$negate = function (n) {
+	return -n;
+};
+var elm$core$Basics$neq = _Utils_notEqual;
 var elm$core$Platform$Cmd$batch = _Platform_batch;
 var elm$core$Platform$Cmd$none = elm$core$Platform$Cmd$batch(_List_Nil);
 var elm$time$Time$posixToMillis = function (_n0) {
@@ -5107,7 +5138,7 @@ var author$project$Notes$update = F2(
 				return _Utils_Tuple2(
 					noteList,
 					A2(elm$core$Task$perform, author$project$Notes$CreateNote, elm$time$Time$now));
-			default:
+			case 'CreateNote':
 				var newTime = msg.a;
 				var newTimestamp = elm$time$Time$posixToMillis(newTime);
 				var newId = newTimestamp;
@@ -5124,9 +5155,52 @@ var author$project$Notes$update = F2(
 							selectedNoteId: newId
 						}),
 					elm$core$Platform$Cmd$none);
+			case 'ClickDelete':
+				var newNotes = A2(
+					elm$core$List$filter,
+					function (note) {
+						return !_Utils_eq(note.id, noteList.selectedNoteId);
+					},
+					noteList.notes);
+				var firstVisibleNote = A2(author$project$Notes$getFirstVisibleNote, newNotes, noteList.searchNoteText);
+				if (firstVisibleNote.$ === 'Nothing') {
+					return _Utils_Tuple2(
+						_Utils_update(
+							noteList,
+							{notes: newNotes}),
+						elm$core$Platform$Cmd$none);
+				} else {
+					var availableNote = firstVisibleNote.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							noteList,
+							{notes: newNotes, selectedNoteId: availableNote.id}),
+						elm$core$Platform$Cmd$none);
+				}
+			default:
+				var searchNoteText = msg.a;
+				var firstVisibleNote = A2(author$project$Notes$getFirstVisibleNote, noteList.notes, searchNoteText);
+				if (firstVisibleNote.$ === 'Nothing') {
+					return _Utils_Tuple2(
+						_Utils_update(
+							noteList,
+							{searchNoteText: searchNoteText, selectedNoteId: -1}),
+						elm$core$Platform$Cmd$none);
+				} else {
+					var availableNote = firstVisibleNote.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							noteList,
+							{searchNoteText: searchNoteText, selectedNoteId: availableNote.id}),
+						elm$core$Platform$Cmd$none);
+				}
 		}
 	});
+var author$project$Notes$ClickDelete = {$: 'ClickDelete'};
 var author$project$Notes$ClickNew = {$: 'ClickNew'};
+var author$project$Notes$InputSearch = function (a) {
+	return {$: 'InputSearch', a: a};
+};
 var author$project$Notes$UpdateSelectedNoteBody = function (a) {
 	return {$: 'UpdateSelectedNoteBody', a: a};
 };
@@ -5403,7 +5477,6 @@ var author$project$Notes$viewNoteSelector = F2(
 						]))
 				]));
 	});
-var elm$core$List$sortBy = _List_sortBy;
 var author$project$Notes$viewNoteSelectors = function (noteList) {
 	return A2(
 		elm$html$Html$div,
@@ -5416,13 +5489,7 @@ var author$project$Notes$viewNoteSelectors = function (noteList) {
 			function (note) {
 				return A2(author$project$Notes$viewNoteSelector, note, noteList.selectedNoteId);
 			},
-			elm$core$List$reverse(
-				A2(
-					elm$core$List$sortBy,
-					function ($) {
-						return $.timestamp;
-					},
-					noteList.notes))));
+			A2(author$project$Notes$transformNotes, noteList.searchNoteText, noteList.notes)));
 };
 var elm$html$Html$button = _VirtualDom_node('button');
 var elm$html$Html$input = _VirtualDom_node('input');
@@ -5461,7 +5528,8 @@ var author$project$Notes$view = function (noteList) {
 						elm$html$Html$button,
 						_List_fromArray(
 							[
-								elm$html$Html$Attributes$class('toolbar-button')
+								elm$html$Html$Attributes$class('toolbar-button'),
+								elm$html$Html$Events$onClick(author$project$Notes$ClickDelete)
 							]),
 						_List_fromArray(
 							[
@@ -5473,7 +5541,8 @@ var author$project$Notes$view = function (noteList) {
 							[
 								elm$html$Html$Attributes$class('toolbar-search'),
 								elm$html$Html$Attributes$type_('text'),
-								elm$html$Html$Attributes$placeholder('Search.. ')
+								elm$html$Html$Attributes$placeholder('Search.. '),
+								elm$html$Html$Events$onInput(author$project$Notes$InputSearch)
 							]),
 						_List_Nil)
 					])),
@@ -5523,7 +5592,6 @@ var elm$core$String$indexes = _String_indexes;
 var elm$core$String$isEmpty = function (string) {
 	return string === '';
 };
-var elm$core$String$contains = _String_contains;
 var elm$core$String$toInt = _String_toInt;
 var elm$url$Url$Url = F6(
 	function (protocol, host, port_, path, query, fragment) {
